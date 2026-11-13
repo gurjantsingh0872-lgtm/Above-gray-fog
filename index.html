@@ -457,6 +457,141 @@
           pointer-events: none;
         }
       }
+      #card {
+        position: absolute;
+        inset: 0;
+        z-index: 5;
+        background: #05030a;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 1s;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 10px 6%;
+        gap: 4px;
+        cursor: pointer;
+        overflow: hidden;
+      }
+      #card.on {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      #card .c1 {
+        color: var(--gold);
+        font-size: max(10px, calc(var(--u, 1.5px) * 5.5));
+        letter-spacing: 2px;
+      }
+      #card .c2 {
+        font-size: max(17px, calc(var(--u, 1.5px) * 10));
+        font-weight: 700;
+        color: #e6dccd;
+      }
+      #card p {
+        margin: 4px 0;
+        color: #9a8fa0;
+        font-style: italic;
+        font-size: max(11px, calc(var(--u, 1.5px) * 5.8));
+        line-height: 1.4;
+        max-width: 94%;
+      }
+      #card .c3 {
+        color: var(--gold);
+        font-size: 11px;
+        opacity: 0;
+        animation: b 1s steps(2) infinite;
+      }
+      #card.ok .c3 {
+        opacity: 1;
+      }
+      #inv {
+        position: absolute;
+        inset: 0;
+        z-index: 6;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(5, 3, 10, 0.82);
+      }
+      #inv.on {
+        display: flex;
+      }
+      .ip {
+        width: min(92%, 440px);
+        max-height: 92%;
+        overflow: auto;
+        background: linear-gradient(#1d1624, #100b16);
+        border: 3px solid #8e8aa4;
+        border-radius: 10px;
+        box-shadow: inset 0 0 0 2px #4a1622;
+        padding: 8px 12px;
+        color: #e6dccd;
+        font-size: max(12px, calc(var(--u, 1.5px) * 6.4));
+      }
+      .ih {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: var(--gold);
+        margin-bottom: 4px;
+      }
+      #ix {
+        background: none;
+        border: 1px solid #4a3c5c;
+        border-radius: 6px;
+        color: #cfc4d0;
+        width: 28px;
+        height: 28px;
+        cursor: pointer;
+      }
+      .it {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding: 5px 0;
+        border-top: 1px solid #3a2f48;
+      }
+      .it img {
+        width: 32px;
+        height: 32px;
+        image-rendering: pixelated;
+        flex: none;
+      }
+      .it b {
+        display: block;
+        color: #efe6d8;
+        font-weight: 500;
+      }
+      .it span {
+        color: #9a8fa0;
+        font-size: 0.92em;
+        line-height: 1.3;
+      }
+      #toast {
+        position: absolute;
+        left: 50%;
+        top: 38px;
+        transform: translateX(-50%);
+        z-index: 4;
+        background: rgba(10, 6, 14, 0.88);
+        border: 1px solid var(--gold);
+        color: var(--gold);
+        padding: 3px 10px;
+        border-radius: 6px;
+        font-size: max(11px, calc(var(--u, 1.5px) * 5.8));
+        opacity: 0;
+        transition: opacity 0.4s;
+        pointer-events: none;
+        white-space: nowrap;
+      }
+      #toast.on {
+        opacity: 1;
+      }
+      #bag {
+        display: none;
+      }
     </style>
   </head>
   <body>
@@ -468,6 +603,7 @@
           ><span class="r"
             ><span id="gp" title="Controller connected">🎮</span
             ><span id="cl">Clues 0/3</span
+            ><button id="bag" aria-label="Open inventory">🎒</button
             ><button id="snd" aria-label="Toggle sound">🔊</button
             ><button id="fs" aria-label="Toggle full screen">⛶</button></span
           >
@@ -475,8 +611,19 @@
         <div id="dlg">
           <span id="who"></span><span id="tx"></span><span id="nx">▼</span>
         </div>
+        <div id="toast"></div>
+        <div id="inv">
+          <div class="ip">
+            <div class="ih">
+              <span>Inventory</span
+              ><button id="ix" aria-label="Close inventory">✕</button>
+            </div>
+            <div id="il"></div>
+          </div>
+        </div>
+        <div id="card"></div>
         <div id="start">
-          <p>Chapter One</p>
+          <p>A fan-made story</p>
           <h2>The Stranger<br />in the Mirror</h2>
           <p>Headphones recommended</p>
           <button id="go">Begin</button>
@@ -637,7 +784,7 @@
         if (master) master.gain.value = snd ? 0.5 : 0;
       };
       /* ---------- data ---------- */
-      const O = [
+      let O = [
         {
           id: "nb",
           k: 1,
@@ -781,13 +928,23 @@
         },
         { id: "mir", tiles: [[14, 9]] },
       ];
-      const DOORS = [
-          { x: 3, y: 8 },
-          { x: 16, y: 8 },
-        ],
-        seen = {};
+      let DOORS = [
+        { x: 3, y: 8 },
+        { x: 16, y: 8 },
+      ];
+      const seen = {};
+
       const P = { x: 10, y: 5, fx: 10, fy: 5, f: 0, mv: 0 };
-      let scene = "title",
+      const st = {},
+        inv = [];
+      let veil = 0,
+        veilT = 0,
+        tv = 0,
+        flashOut = 0,
+        trans = null,
+        pa = null,
+        loc = "room",
+        scene = "title",
         pose = 0,
         handUp = 1,
         tm = 0,
@@ -800,13 +957,39 @@
         cb = null,
         dark = 0.97,
         tgt = 0.97;
-      const keyN = () => O.filter((o) => o.k && seen[o.id]).length;
-      const solid = (x, y) =>
-        x < 4 ||
-        x > 15 ||
-        y < 4 ||
-        y > 10 ||
-        O.some((o) => o.tiles.some((t) => t[0] == x && t[1] == y));
+      const keyN = () => O.filter((o) => o.k && seen[o.id]).length,
+        kt = () => O.filter((o) => o.k).length;
+      const vs = (o) => !o.vis || o.vis(),
+        invOn = () => document.getElementById("inv").classList.contains("on");
+      const LOCB = {
+          room: { x0: 4, x1: 15, y0: 4, y1: 10 },
+          hall: { x0: 6, x1: 13, y0: 5, y1: 7 },
+          bath: { x0: 7, x1: 12, y0: 5, y1: 9 },
+        },
+        LOCD = {
+          room: [
+            { x: 3, y: 8 },
+            { x: 16, y: 8 },
+          ],
+          hall: [
+            { x: 5, y: 6 },
+            { x: 14, y: 6 },
+          ],
+          bath: [
+            { x: 6, y: 8 },
+            { x: 13, y: 8 },
+          ],
+        };
+      const solid = (x, y) => {
+        const b = LOCB[loc] || LOCB.room;
+        return (
+          x < b.x0 ||
+          x > b.x1 ||
+          y < b.y0 ||
+          y > b.y1 ||
+          O.some((o) => vs(o) && o.tiles.some((t) => t[0] == x && t[1] == y))
+        );
+      };
       /* ---------- dialogue ---------- */
       function show() {
         document.body.classList.toggle("talk", !!cur);
@@ -859,17 +1042,41 @@
           show();
         }
       }, 30);
+      function goalTxt() {
+        if (scene != "room") return "";
+        if (st.dawn) {
+          if (!st.mel) return "Open the door to greet Melissa (right door).";
+          if (st.needBread && !st.bread)
+            return "Take out the leftover bread (cabinet).";
+          return "";
+        }
+        if (!st.c1)
+          return keyN() < kt()
+            ? "Check the notebook, revolver and red handprint."
+            : "Look in the mirror.";
+        if (!st.lit)
+          return st.penny
+            ? "Try the lamp again."
+            : st.tried
+              ? "Check the gas meter on the wall."
+              : "Find some light. Try the gas lamp.";
+        if (!st.healed) return "Look at your wound in the mirror.";
+        if (!st.items) return "Find soap and a towel in the cabinet.";
+        if (!st.washed) return "Wash up in the shared bathroom down the hall.";
+        if (!st.stained) return "Clean the room. Start under the desk.";
+        if (!st.bullet) return "Find the stray bullet by the wall.";
+        if (!st.checked) return "Check the revolver.";
+        if (!st.asked) return "Read the notebook again and think.";
+        return "Change into a clean shirt (cabinet).";
+      }
       function upd() {
-        document.getElementById("cl").textContent = "Clues " + keyN() + "/3";
-        objEl.textContent =
-          scene == "room"
-            ? keyN() < 3
-              ? "Check the notebook, revolver and red handprint."
-              : "Look in the mirror."
-            : "";
+        const cl = document.getElementById("cl");
+        cl.textContent = "Clues " + keyN() + "/" + kt();
+        cl.style.display = loc == "flat" || !st.c1 ? "" : "none";
+        objEl.textContent = goalTxt();
       }
       function move(dx, dy) {
-        if (cur || scene != "room" || done || P.mv) return;
+        if (cur || scene != "room" || done || P.mv || invOn()) return;
         P.f = dx ? (dx > 0 ? 3 : 2) : dy > 0 ? 0 : 1;
         const x = P.x + dx,
           y = P.y + dy;
@@ -881,6 +1088,15 @@
         }
       }
       function act() {
+        const ce = document.getElementById("card");
+        if (ce.classList.contains("on")) {
+          ce.click();
+          return;
+        }
+        if (invOn()) {
+          toggleInv();
+          return;
+        }
         if (cur) {
           adv();
           return;
@@ -888,42 +1104,61 @@
         if (scene != "room" || done) return;
         const a = (o) =>
           o.tiles.some((t) => Math.abs(t[0] - P.x) + Math.abs(t[1] - P.y) == 1);
-        const o = O.find((o) => o.id != "mir" && a(o));
+        const fd = [
+            [0, 1],
+            [0, -1],
+            [-1, 0],
+            [1, 0],
+          ][P.f],
+          hit = (o) =>
+            o.tiles.some((t) => t[0] == P.x + fd[0] && t[1] == P.y + fd[1]);
+        const fdr = DOORS.find((d) => d.x == P.x + fd[0] && d.y == P.y + fd[1]);
+        if (fdr) {
+          doorAct(fdr);
+          return;
+        }
+        const o =
+          O.find((o) => vs(o) && o.id != "mir" && hit(o)) ||
+          O.find((o) => vs(o) && o.id != "mir" && a(o));
         if (o) {
+          const first = !seen[o.id];
           seen[o.id] = 1;
+          let L = o.dyn ? o.dyn(first) : null;
+          if (!L) L = first ? o.lines : o.again || o.lines;
           upd();
-          talk(o.lines, () => {
-            if (keyN() == 3 && !seen._r) {
-              seen._r = 1;
+          talk(L, () => {
+            if (pa) {
+              const f = pa;
+              pa = null;
+              f();
+              return;
+            }
+            if (!st.c1 && loc == "room" && keyN() >= kt() && !seen["_room"]) {
+              seen["_room"] = 1;
               talk(
                 [[Z, "Okay. Blood, a gun, a cursed note. The mirror is next."]],
                 upd,
               );
-            }
+            } else if (loc == "flat" && keyN() >= kt() && !seen["_flat"]) {
+              seen["_flat"] = 1;
+              talk(
+                [[Z, "That’s all I can learn here. The front door is next."]],
+                upd,
+              );
+            } else upd();
           });
           return;
         }
         const m = O.find((o) => o.id == "mir");
-        if (a(m)) {
-          if (keyN() < 3) {
-            talk([
-              [
-                Z,
-                "I should understand this room before I look at myself. The notebook, the revolver, the blood...",
-              ],
-            ]);
-            return;
-          }
-          mirror();
+        if (m && vs(m) && a(m)) {
+          mirrorAct();
           return;
         }
-        if (DOORS.some((d) => Math.abs(d.x - P.x) + Math.abs(d.y - P.y) == 1)) {
-          talk([
-            [
-              Z,
-              "Not yet. Out there is a city I know nothing about, and my head is still bleeding.",
-            ],
-          ]);
+        const dr = DOORS.find(
+          (d) => Math.abs(d.x - P.x) + Math.abs(d.y - P.y) == 1,
+        );
+        if (dr) {
+          doorAct(dr);
           return;
         }
         talk([["", "Nothing here. Stand next to something and try again."]]);
@@ -956,8 +1191,8 @@
             flash = 0.01;
             hb = 1;
             setTimeout(() => {
-              done = 1;
               hb = 0;
+              toCh2();
             }, 900);
           },
         );
@@ -974,6 +1209,8 @@
         e: "E",
         " ": "E",
         Enter: "E",
+        i: "I",
+        Escape: "I",
       };
       function key(k) {
         ({
@@ -982,6 +1219,7 @@
           D: () => move(0, 1),
           R: () => move(1, 0),
           E: act,
+          I: toggleInv,
         })[k]();
       }
       addEventListener("keydown", (e) => {
@@ -1019,10 +1257,16 @@
       const bg = document.createElement("canvas");
       bg.width = 320;
       bg.height = 192;
-      function buildBG() {
-        c = bg.getContext("2d");
+      let curBG = bg;
+      function buildBG(cvs, fl) {
+        c = cvs.getContext("2d");
         R("#000", 0, 0, 320, 192);
-        const wood = ["#3d2b20", "#46322a", "#352619", "#4a3626"];
+        const wood =
+          fl == 2
+            ? ["#2a1e18", "#30231c", "#241812", "#33261e"]
+            : fl
+              ? ["#4d3c2e", "#564332", "#43321f", "#5c4934"]
+              : ["#3d2b20", "#46322a", "#352619", "#4a3626"];
         for (let i = 0; i < 14; i++) {
           const Y = 64 + i * 8;
           let x = 48 - ((i * 29) % 40);
@@ -1055,39 +1299,41 @@
           R("rgba(10,4,12," + (0.3 - x * 0.025) + ")", 64 + x, 64, 1, 112);
           R("rgba(10,4,12," + (0.3 - x * 0.025) + ")", 255 - x, 64, 1, 112);
         }
-        /* rug */
-        R("#1f0a12", 112, 112, 96, 48);
-        B(112, 112, 96, 48, "#3a1220");
-        R("#6a4a28", 114, 114, 92, 44);
-        R("#3a1220", 116, 116, 88, 40);
-        R("#6a4a28", 118, 118, 84, 36);
-        R("#4a1626", 120, 120, 80, 32);
-        for (let i = 0; i < 6; i++) {
-          const cx = 124 + i * 14,
-            cy = 136;
-          R("#7a2a3e", cx + 5, cy - 8, 2, 16);
-          R("#7a2a3e", cx + 2, cy - 5, 8, 10);
-          R("#4a1626", cx + 4, cy - 2, 4, 4);
+        if (fl != 2 && fl != 3) {
+          /* rug */
+          R(fl ? "#101a24" : "#1f0a12", 112, 112, 96, 48);
+          B(112, 112, 96, 48, fl ? "#1c2a3a" : "#3a1220");
+          R(fl ? "#7a6a48" : "#6a4a28", 114, 114, 92, 44);
+          R(fl ? "#1c2a3a" : "#3a1220", 116, 116, 88, 40);
+          R(fl ? "#7a6a48" : "#6a4a28", 118, 118, 84, 36);
+          R(fl ? "#2c4258" : "#4a1626", 120, 120, 80, 32);
+          for (let i = 0; i < 6; i++) {
+            const cx = 124 + i * 14,
+              cy = 136;
+            R(fl ? "#4a6a8a" : "#7a2a3e", cx + 5, cy - 8, 2, 16);
+            R(fl ? "#4a6a8a" : "#7a2a3e", cx + 2, cy - 5, 8, 10);
+            R(fl ? "#2c4258" : "#4a1626", cx + 4, cy - 2, 4, 4);
+          }
+          for (let i = 0; i < 48; i += 2) {
+            R("#5a4228", 110, 112 + i, 2, 1);
+            R("#5a4228", 208, 112 + i, 2, 1);
+          }
+          for (let i = 0; i < 60; i++)
+            R(
+              "rgba(0,0,0,.25)",
+              112 + Math.floor(hs(i, 1) * 96),
+              112 + Math.floor(hs(i, 2) * 48),
+              2,
+              1,
+            );
         }
-        for (let i = 0; i < 48; i += 2) {
-          R("#5a4228", 110, 112 + i, 2, 1);
-          R("#5a4228", 208, 112 + i, 2, 1);
-        }
-        for (let i = 0; i < 60; i++)
-          R(
-            "rgba(0,0,0,.25)",
-            112 + Math.floor(hs(i, 1) * 96),
-            112 + Math.floor(hs(i, 2) * 48),
-            2,
-            1,
-          );
         /* wall */
         for (let x = 3; x <= 16; x++) {
           const X = x * S;
-          R("#2c2634", X, 32, S, 32);
-          R("#342d3e", X + (x % 2 ? 0 : 8), 32, 4, 32);
+          R(fl ? "#3a322c" : "#2c2634", X, 32, S, 32);
+          R(fl ? "#423a32" : "#342d3e", X + (x % 2 ? 0 : 8), 32, 4, 32);
           for (const yy of [36, 50]) {
-            const cc = "#40364c",
+            const cc = fl ? "#554a3e" : "#40364c",
               ox = X + (yy == 50 ? 0 : 0);
             R(cc, ox + 7, yy, 2, 7);
             R(cc, ox + 5, yy + 2, 6, 3);
@@ -1133,15 +1379,16 @@
         R("#0b070e", 272, 0, 48, 192);
         R("#07040a", 48, 176, 224, 16);
         R("#2a1e24", 48, 176, 224, 1);
-        for (const d of DOORS) {
-          const X = d.x * S + (d.x == 3 ? 0 : 2),
-            Y = d.y * S - 8;
-          B(X, Y, 14, 28, "#3a2518", "#5a3a28");
-          R("#241610", X + 3, Y + 4, 8, 8);
-          R("#241610", X + 3, Y + 15, 8, 9);
-          R("#5a3a28", X + 3, Y + 4, 8, 1);
-          R("#b89038", X + (d.x == 3 ? 10 : 2), Y + 14, 2, 2);
-        }
+        if (!noDoor)
+          for (const d of DOORS) {
+            const X = d.x * S + (d.x == 3 ? 0 : 2),
+              Y = d.y * S - 8;
+            B(X, Y, 14, 28, "#3a2518", "#5a3a28");
+            R("#241610", X + 3, Y + 4, 8, 8);
+            R("#241610", X + 3, Y + 15, 8, 9);
+            R("#5a3a28", X + 3, Y + 4, 8, 1);
+            R("#b89038", X + (d.x == 3 ? 10 : 2), Y + 14, 2, 2);
+          }
         c = g;
       }
       /* ---------- sprites ---------- */
@@ -1174,6 +1421,10 @@
           R("#f0d868", X + 11, Y + 6, 1, 1);
         },
         hp: (X, Y) => {
+          if (st.wiped) {
+            R("rgba(80,20,30,.5)", X + 5, Y + 8, 6, 2);
+            return;
+          }
           R("#7a0e1e", X + 4, Y + 6, 8, 6);
           for (let i = 0; i < 4; i++) R("#7a0e1e", X + 4 + i * 2, Y + 3, 1, 4);
           R("#7a0e1e", X + 2, Y + 8, 3, 2);
@@ -1212,19 +1463,29 @@
         lamp: (X, Y) => {
           R("#6a6a78", X + 7, Y - 2, 2, 6);
           B(X + 3, Y + 3, 10, 11, "#26262e");
-          R("#ffd878", X + 5, Y + 5, 6, 7);
-          R("#fff0b0", X + 7, Y + 6, 2, 4);
+          {
+            const on = loc == "flat" || st.lit;
+            R(on ? "#ffd878" : "#2a2630", X + 5, Y + 5, 6, 7);
+            if (on) R("#fff0b0", X + 7, Y + 6, 2, 4);
+          }
           R("#26262e", X + 7, Y + 5, 1, 7);
           R("#26262e", X + 5, Y + 8, 6, 1);
         },
         win: (X, Y) => {
           B(X, Y - 18, 16, 28, "#3a3040", "#5a4a60");
-          R("#0c0610", X + 2, Y - 16, 12, 24);
-          R("#b82840", X + 5, Y - 12, 6, 6);
-          R("#f06a80", X + 6, Y - 11, 2, 2);
-          R("#7a1a2c", X + 9, Y - 8, 2, 2);
-          R("#fff", X + 3, Y - 5, 1, 1);
-          R("#c8a0a8", X + 12, Y - 13, 1, 1);
+          const d = st.dawn;
+          R(d ? "#5a4a6a" : "#0c0610", X + 2, Y - 16, 12, 24);
+          if (d) {
+            R("#c8885a", X + 2, Y - 8, 12, 16);
+            R("#e8b068", X + 2, Y - 2, 12, 10);
+            R("#f8d890", X + 4, Y + 2, 8, 4);
+          } else {
+            R("#b82840", X + 5, Y - 12, 6, 6);
+            R("#f06a80", X + 6, Y - 11, 2, 2);
+            R("#7a1a2c", X + 9, Y - 8, 2, 2);
+            R("#fff", X + 3, Y - 5, 1, 1);
+            R("#c8a0a8", X + 12, Y - 13, 1, 1);
+          }
           R("#3a3040", X + 7, Y - 16, 2, 24);
           R("#3a3040", X + 2, Y - 6, 12, 2);
         },
@@ -1449,7 +1710,7 @@
             px + (f == 2 ? 11 : 12),
             hy + 7,
             1,
-            1 + Math.floor((Math.sin(tm / 40) + 1) * 1.5),
+            st.healed ? 0 : 1 + Math.floor((Math.sin(tm / 40) + 1) * 1.5),
           );
         }
       }
@@ -1487,70 +1748,105 @@
         ctx.fillStyle = gr;
         ctx.fillRect(x - r, y - r, r * 2, r * 2);
       }
+      const WINP = {
+        room: { x: 13, y: 3, ty: 64, len: 88 },
+        hall: { x: 12, y: 4, ty: 80, len: 44 },
+        bath: { x: 11, y: 4, ty: 80, len: 64 },
+      };
       function lighting() {
         dark += (tgt - dark) * 0.02;
+        const W = WINP[loc] || WINP.room,
+          wx = W.x * S + 8,
+          wy = W.y * S + 2,
+          lampOn = loc == "room" && st.lit;
         const fl =
             1 + Math.sin(tm / 7) * 0.03 + (Math.random() < 0.02 ? -0.12 : 0),
           d = Math.max(0.5, dark - bp * 0.07);
+        const beam = (ctx) => {
+          ctx.beginPath();
+          ctx.moveTo(wx - 6, W.ty);
+          ctx.lineTo(wx + 6, W.ty);
+          ctx.lineTo(wx - 44, W.ty + W.len);
+          ctx.lineTo(wx - 88, W.ty + W.len);
+          ctx.fill();
+        };
         lm.globalCompositeOperation = "source-over";
         lm.clearRect(0, 0, 320, 192);
         lm.fillStyle = "rgba(4,1,8," + d + ")";
         lm.fillRect(0, 0, 320, 192);
         lm.globalCompositeOperation = "destination-out";
-        glow(lm, 120, 58, 70 * fl, 0.85, "rgba(0,0,0,A)");
-        glow(lm, 216, 50, 46, 0.5, "rgba(0,0,0,A)");
-        const bgr = lm.createLinearGradient(0, 64, 0, 150);
-        bgr.addColorStop(0, "rgba(0,0,0,.5)");
+        if (lampOn) glow(lm, 120, 58, 96 * fl, 0.85, "rgba(0,0,0,A)");
+        glow(lm, wx, wy, 46, st.dawn ? 0.7 : 0.5, "rgba(0,0,0,A)");
+        const bgr = lm.createLinearGradient(0, W.ty, 0, W.ty + W.len);
+        bgr.addColorStop(0, "rgba(0,0,0," + (st.dawn ? 0.75 : 0.5) + ")");
         bgr.addColorStop(1, "rgba(0,0,0,.05)");
         lm.fillStyle = bgr;
-        lm.beginPath();
-        lm.moveTo(210, 64);
-        lm.lineTo(222, 64);
-        lm.lineTo(172, 152);
-        lm.lineTo(128, 152);
-        lm.fill();
-        glow(lm, P.fx * S + 8, P.fy * S + 2, 32, 0.4, "rgba(0,0,0,A)");
+        beam(lm);
+        glow(
+          lm,
+          P.fx * S + 8,
+          P.fy * S + 2,
+          lampOn ? 32 : 42,
+          lampOn ? 0.4 : 0.55,
+          "rgba(0,0,0,A)",
+        );
         g.drawImage(lmc, 0, 0);
+        const wc = st.dawn ? "240,175,95" : "200,40,64";
         g.globalCompositeOperation = "screen";
-        glow(g, 216, 50, 40, 0.22, "rgba(200,40,64,A)");
-        const bg2 = g.createLinearGradient(0, 64, 0, 150);
-        bg2.addColorStop(0, "rgba(190,30,56,.2)");
-        bg2.addColorStop(1, "rgba(190,30,56,0)");
+        glow(g, wx, wy, 40, 0.22, "rgba(" + wc + ",A)");
+        const bg2 = g.createLinearGradient(0, W.ty, 0, W.ty + W.len);
+        bg2.addColorStop(
+          0,
+          "rgba(" + wc + "," + (lampOn ? 0.08 : st.dawn ? 0.28 : 0.2) + ")",
+        );
+        bg2.addColorStop(1, "rgba(" + wc + ",0)");
         g.fillStyle = bg2;
-        g.beginPath();
-        g.moveTo(210, 64);
-        g.lineTo(222, 64);
-        g.lineTo(172, 152);
-        g.lineTo(128, 152);
-        g.fill();
-        glow(g, 120, 58, 36 * fl, 0.18, "rgba(255,190,90,A)");
-        glow(g, 168, 72, 16, 0.26, "rgba(220,50,80,A)");
+        beam(g);
+        if (lampOn) glow(g, 120, 58, 36 * fl, 0.18, "rgba(255,190,90,A)");
+        if (loc == "room" && !st.dawn)
+          glow(g, 168, 72, 16, 0.26, "rgba(220,50,80,A)");
         if (bp > 0) glow(g, 160, 96, 170, bp * 0.1, "rgba(160,10,30,A)");
+        const b = LOCB[loc] || LOCB.room;
         for (const p of dust) {
           p.y -= p.v;
           p.x += Math.sin(tm / 50 + p.y) * 0.1;
-          if (p.y < 66) {
-            p.y = 150;
-            p.x = 130 + Math.random() * 80;
+          if (p.y < W.ty + 2) {
+            p.y = W.ty + W.len - 4;
+            p.x = wx - 80 + Math.random() * 70;
           }
-          R("rgba(255,170,180,.45)", p.x, p.y, 1, 1);
+          if (p.x > b.x0 * S && p.x < (b.x1 + 1) * S && p.y < (b.y1 + 1) * S)
+            R(
+              "rgba(255," + (st.dawn ? 210 : 170) + ",180,.45)",
+              p.x,
+              p.y,
+              1,
+              1,
+            );
         }
         g.globalCompositeOperation = "source-over";
         bp = Math.max(0, bp - 0.03);
       }
       function fog() {
+        const b = LOCB[loc] || LOCB.room;
+        g.save();
+        g.beginPath();
+        g.rect(
+          b.x0 * S,
+          b.y0 * S,
+          (b.x1 - b.x0 + 1) * S,
+          (b.y1 - b.y0 + 1) * S,
+        );
+        g.clip();
         for (let i = 0; i < 4; i++) {
           const x = ((tm * 0.15 * (i + 1) + i * 90) % 420) - 50,
-            y = 150 + i * 8 + Math.sin(tm / 60 + i) * 3;
+            y = (b.y1 + 1) * S - 10 - i * 6 + Math.sin(tm / 60 + i) * 3;
           const gr = g.createRadialGradient(x, y, 2, x, y, 50);
           gr.addColorStop(0, "rgba(140,150,165,.07)");
           gr.addColorStop(1, "rgba(140,150,165,0)");
           g.fillStyle = gr;
-          g.save();
-          g.translate(0, 0);
           g.fillRect(x - 50, y - 14, 100, 28);
-          g.restore();
         }
+        g.restore();
       }
       /* ---------- main loop ---------- */
       function draw() {
@@ -1558,20 +1854,79 @@
         P.fx += Math.max(-0.11, Math.min(0.11, P.x - P.fx));
         P.fy += Math.max(-0.11, Math.min(0.11, P.y - P.fy));
         P.mv = Math.abs(P.x - P.fx) > 0.001 || Math.abs(P.y - P.fy) > 0.001;
+        for (const o of O)
+          if (o.tx != null) {
+            const dx = o.tx - o.fx,
+              dy = o.ty - o.fy,
+              dd = Math.hypot(dx, dy);
+            if (dd < 0.08) {
+              o.fx = o.tx;
+              o.fy = o.ty;
+              o.tx = null;
+              const f = o.arr;
+              o.arr = null;
+              if (f) f();
+            } else {
+              o.fx += (dx / dd) * 0.06;
+              o.fy += (dy / dd) * 0.06;
+            }
+          }
         g.clearRect(0, 0, 320, 192);
-        g.drawImage(bg, 0, 0);
+        g.drawImage(curBG, 0, 0);
         for (const o of O)
-          if (o.w) art[o.id](o.tiles[0][0] * S, o.tiles[0][1] * S);
-        const L = [{ y: 4, f: () => art.desk(8 * S, 4 * S) }];
+          if (o.w && vs(o))
+            art[o.art || o.id](o.tiles[0][0] * S, o.tiles[0][1] * S);
+        const L =
+          loc == "room" ? [{ y: 4, f: () => art.desk(8 * S, 4 * S) }] : [];
         for (const o of O)
-          if (!o.w)
+          if (!o.w && vs(o))
             L.push({
-              y: Math.max(...o.tiles.map((t) => t[1])),
-              f: () => art[o.id](o.tiles[0][0] * S, o.tiles[0][1] * S),
+              y:
+                o.fy != null
+                  ? o.fy + 0.5
+                  : o.z || Math.max(...o.tiles.map((t) => t[1])),
+              f: () =>
+                o.npc
+                  ? npc(
+                      (o.fx != null ? o.fx : o.tiles[0][0]) * S,
+                      (o.fy != null ? o.fy : o.tiles[0][1]) * S,
+                      o.npc,
+                    )
+                  : art[o.art || o.id](o.tiles[0][0] * S, o.tiles[0][1] * S),
             });
         L.push({ y: P.fy + 0.5, f: player });
         L.sort((a, b) => a.y - b.y);
         L.forEach((l) => l.f());
+        if (trans) {
+          const T = trans;
+          T.t++;
+          if (T.t == 2) doorSfx();
+          const left = T.d.x < 10;
+          if (T.t < 30) {
+            const fr = T.t / 30,
+              X = T.d.x * S + (left ? 0 : 2),
+              Y = T.d.y * S - 8,
+              w = Math.max(2, Math.round(14 * (1 - fr * 0.85))),
+              lx = left ? X : X + 14 - w;
+            R("#07040a", X, Y, 14, 28);
+            R("#4a3022", lx, Y, w, 28);
+            R("#6a4630", lx, Y, w, 1);
+            R("#b89038", left ? X + w - 3 : lx + 1, Y + 14, 2, 2);
+          }
+          if (T.t == 36 || T.t == 46 || T.t == 56) step();
+          if (T.t < 62) tv = T.t < 30 ? 0 : Math.min(1, (T.t - 30) / 30);
+          if (T.t == 62) {
+            swapLoc(T.to, T.x, T.y, T.f);
+            tv = 1;
+          }
+          if (T.t > 62) tv = Math.max(0, 1 - (T.t - 62) / 32);
+          if (T.t >= 96) {
+            trans = null;
+            tv = 0;
+            scene = "room";
+            if (T.after) T.after();
+          }
+        }
         fog();
         lighting();
         const vg = g.createRadialGradient(160, 100, 70, 160, 100, 210);
@@ -1597,7 +1952,22 @@
         if (flash) {
           g.fillStyle = "rgba(100,8,18," + Math.min(0.94, flash) + ")";
           g.fillRect(0, 0, 320, 192);
-          if (flash < 1) flash += 0.02;
+          if (flashOut) {
+            flash -= 0.02;
+            if (flash <= 0) {
+              flash = 0;
+              flashOut = 0;
+            }
+          } else if (flash < 1) flash += 0.02;
+        }
+        veil += (veilT - veil) * 0.05;
+        if (veil > 0.01) {
+          g.fillStyle = "rgba(0,0,0," + Math.min(1, veil) + ")";
+          g.fillRect(0, 0, 320, 192);
+        }
+        if (tv > 0) {
+          g.fillStyle = "rgba(0,0,0," + tv + ")";
+          g.fillRect(0, 0, 320, 192);
         }
         if (done) {
           c = g;
@@ -1605,7 +1975,7 @@
           g.textAlign = "center";
           g.fillStyle = "#c99a52";
           g.font = "700 11px 'Pixelify Sans',monospace";
-          g.fillText("CHAPTER ONE COMPLETE", 160, 82);
+          g.fillText("TO BE CONTINUED", 160, 82);
           g.fillStyle = "#e6dccd";
           g.font = "700 17px 'Pixelify Sans',monospace";
           g.fillText("The Stranger in the Mirror", 160, 106);
@@ -1714,8 +2084,16 @@
       addEventListener("gamepadconnected", () => {
         document.getElementById("gp").style.display = "inline";
       });
+      let gpOff = 0;
       function pollPad() {
-        const gps = navigator.getGamepads ? navigator.getGamepads() : [];
+        if (gpOff) return;
+        let gps = [];
+        try {
+          gps = navigator.getGamepads ? navigator.getGamepads() : [];
+        } catch (e) {
+          gpOff = 1;
+          return;
+        }
         for (const gp of gps) {
           if (!gp) continue;
           document.getElementById("gp").style.display = "inline";
@@ -1741,7 +2119,10 @@
             key(d);
             gpT = now;
           }
-          const a = b(0) || b(1) || b(2) || b(3) || b(9);
+          const yb = b(3);
+          if (yb && !gpPrev.y) toggleInv();
+          gpPrev.y = yb;
+          const a = b(0) || b(1) || b(2) || b(9);
           if (a && !gpPrev.a) {
             if (scene == "title") document.getElementById("go").click();
             else key("E");
@@ -1752,7 +2133,1293 @@
           gpPrev.f = f;
         }
       }
-      buildBG();
+      /* ---------- chapters 2 and 3 ---------- */
+      art.table = (X, Y) => {
+        R("rgba(0,0,0,.4)", X + 2, Y + 30, 48, 4);
+        B(X, Y + 4, 48, 26, W1);
+        R(W3, X + 1, Y + 5, 46, 1);
+        R("#cfc4ae", X + 2, Y + 6, 44, 10);
+        R("#e8dcc4", X + 2, Y + 6, 44, 1);
+        R("#8a7a64", X + 2, Y + 15, 44, 1);
+        R("#33201a", X + 1, Y + 17, 46, 12);
+        for (let i = 0; i < 3; i++) {
+          B(X + 5 + i * 15, Y + 9, 9, 5, "#e8e2d4", "#fff");
+          R("#a8a290", X + 8 + i * 15, Y + 11, 3, 1);
+        }
+        R("#8a5a34", X + 36, Y + 8, 5, 5);
+      };
+      art.paper = (X, Y) => {
+        R("rgba(0,0,0,.3)", X + 3, Y + 11, 12, 2);
+        B(X + 2, Y + 3, 12, 9, "#d8d0b8", "#f0e8d0");
+        R("#14101a", X + 4, Y + 4, 8, 2);
+        R("#5a5060", X + 4, Y + 7, 8, 1);
+        R("#5a5060", X + 4, Y + 9, 5, 1);
+      };
+      art.dwin = (X, Y) => {
+        B(X, Y - 18, 16, 28, "#4a3e48", "#6a5a64");
+        R("#7a8aa4", X + 2, Y - 16, 12, 24);
+        R("#a8b8cc", X + 2, Y - 16, 12, 9);
+        R("#c8d4e0", X + 3, Y - 14, 6, 2);
+        R("#c8d4e0", X + 8, Y - 11, 5, 1);
+        R("#3a4256", X + 2, Y + 3, 5, 5);
+        R("#3a4256", X + 8, Y + 1, 6, 7);
+        R("#4a3e48", X + 7, Y - 16, 2, 24);
+        R("#4a3e48", X + 2, Y - 6, 12, 2);
+      };
+      art.port = (X, Y) => {
+        B(X + 1, Y - 12, 14, 18, "#6a4a28", "#a8844a");
+        R("#2a2230", X + 3, Y - 10, 10, 14);
+        R("#4a4048", X + 4, Y - 4, 3, 8);
+        R("#5a4a6a", X + 8, Y - 5, 3, 9);
+        R("#3a3040", X + 11, Y - 2, 2, 6);
+        R("#e0b890", X + 4, Y - 6, 3, 2);
+        R("#e0b890", X + 8, Y - 7, 3, 2);
+        R("#e0b890", X + 11, Y - 4, 2, 2);
+        R("#c9a24b", X + 5, Y - 2, 1, 1);
+      };
+      function npc(X, Y, n) {
+        const b = Math.floor(tm / 45) % 2,
+          SK = "#e0b890";
+        R("rgba(0,0,0,.45)", X + 2, Y + 14, 12, 3);
+        if (n.dress) {
+          B(X + 3, Y + 9, 10, 7, n.skirt, n.skirtL);
+        } else {
+          B(X + 4, Y + 10, 4, 5, n.pants, "#3c4260");
+          B(X + 9, Y + 10, 4, 5, n.pants, "#3c4260");
+          R("#0a070c", X + 4, Y + 13, 4, 2);
+          R("#0a070c", X + 9, Y + 13, 4, 2);
+        }
+        B(X + 2, Y + 2 + b, 12, 9, n.top, n.topL);
+        R("rgba(0,0,0,.2)", X + 10, Y + 3 + b, 3, 7);
+        B(X - 1, Y + 3 + b, 3, 7, n.top, n.topL);
+        B(X + 14, Y + 3 + b, 3, 7, n.top, n.topL);
+        R(SK, X - 1, Y + 8 + b, 3, 2);
+        R(SK, X + 14, Y + 8 + b, 3, 2);
+        B(X + 3, Y - 7 + b, 10, 9, SK, "#f0cfa8");
+        R(n.hair, X + 3, Y - 7 + b, 10, 4);
+        R(n.hair, X + 3, Y - 7 + b, 2, 6);
+        R(n.hair, X + 11, Y - 7 + b, 2, 6);
+        R(n.hair, X + 5, Y - 4 + b, 3, 1);
+        if (n.long) {
+          R(n.hair, X + 2, Y - 6 + b, 2, 13);
+          R(n.hair, X + 12, Y - 6 + b, 2, 13);
+        }
+        R(OUT, X + 5, Y - 2 + b, 2, 2);
+        R(OUT, X + 9, Y - 2 + b, 2, 2);
+        R("#fff", X + 5, Y - 2 + b, 1, 1);
+        R("#fff", X + 9, Y - 2 + b, 1, 1);
+        R("#8a5a48", X + 7, Y + 1 + b, 2, 1);
+      }
+      const cardEl = document.getElementById("card");
+      let cardFn = null,
+        cardOk = 0;
+      function card(t1, t2, txt, fn) {
+        scene = "card";
+        cardEl.innerHTML =
+          '<div class="c1">' +
+          t1 +
+          '</div><div class="c2">' +
+          t2 +
+          "</div><p>" +
+          txt +
+          '</p><div class="c3">tap to continue</div>';
+        cardEl.classList.remove("ok");
+        cardEl.classList.add("on");
+        cardOk = 0;
+        cardFn = fn;
+        setTimeout(() => {
+          cardOk = 1;
+          cardEl.classList.add("ok");
+        }, 1800);
+      }
+      cardEl.onclick = () => {
+        if (!cardOk) return;
+        cardOk = 0;
+        const f = cardFn;
+        cardFn = null;
+        if (f) f();
+        cardEl.classList.remove("on", "ok");
+      };
+      /* ---------- inventory ---------- */
+      const ITEMS = {
+        penny: {
+          n: "Copper penny",
+          d: "The kingdom’s smallest everyday coin: a crowned king on one face, a sheaf of wheat on the other.",
+        },
+        soap: { n: "Sliver of soap", d: "Worn thin by years of use." },
+        towel: {
+          n: "Tattered towel",
+          d: "Old and thin, but it will do for scrubbing.",
+        },
+        bullet: {
+          n: "Spent bullet",
+          d: "A flattened yellow slug from the wall by the desk. It tells you how Klein’s night ended.",
+        },
+        watch: {
+          n: "Silver pocket watch",
+          d: "A vine-leaf pattern on the lid and a photo of your father inside. Melissa mended it, or so she says.",
+        },
+        errands: {
+          n: "Melissa’s errands",
+          d: "Fresh bread today, eight pounds. A little mutton and some peas, but not too much: Benson may be home on Sunday.",
+        },
+        ritual: {
+          n: "Memory: luck ritual",
+          d: "From an old divination book: four portions of food in the four corners of a room, four steps counter-clockwise with a chant at each, then five silent minutes.",
+        },
+      };
+      function icon(k) {
+        const cn = document.createElement("canvas");
+        cn.width = cn.height = 16;
+        const x = cn.getContext("2d"),
+          r = (c, a, b, w, h) => {
+            x.fillStyle = c;
+            x.fillRect(a, b, w, h);
+          };
+        if (k == "penny") {
+          r(OUT, 3, 3, 10, 10);
+          r("#c98a3a", 4, 4, 8, 8);
+          r("#e8b060", 5, 5, 3, 3);
+          r("#8a5a20", 9, 9, 3, 3);
+        }
+        if (k == "soap") {
+          r(OUT, 2, 5, 12, 8);
+          r("#e8b0c0", 3, 6, 10, 6);
+          r("#fff", 4, 7, 3, 1);
+        }
+        if (k == "towel") {
+          r(OUT, 2, 4, 12, 9);
+          r("#a8a090", 3, 5, 10, 7);
+          r("#7a7466", 3, 8, 10, 1);
+          r("#9a6a6a", 9, 10, 3, 2);
+        }
+        if (k == "bullet") {
+          r(OUT, 3, 6, 10, 5);
+          r("#c9a030", 4, 7, 8, 3);
+          r("#f0d868", 5, 7, 5, 1);
+        }
+        if (k == "ritual") {
+          r(OUT, 3, 2, 10, 12);
+          r("#d8cba0", 4, 3, 8, 10);
+          r("#5a5060", 5, 5, 6, 1);
+          r("#5a5060", 5, 7, 6, 1);
+          r("#5a5060", 5, 9, 4, 1);
+          r("#9a1424", 5, 11, 2, 1);
+        }
+        if (k == "watch") {
+          r(OUT, 3, 3, 10, 10);
+          r("#c8ccd4", 4, 4, 8, 8);
+          r("#8a8e98", 7, 5, 1, 3);
+          r("#8a8e98", 7, 7, 3, 1);
+        }
+        if (k == "errands") {
+          r(OUT, 3, 2, 10, 12);
+          r("#e8dcc0", 4, 3, 8, 10);
+          r("#5a5060", 5, 5, 6, 1);
+          r("#5a5060", 5, 7, 5, 1);
+          r("#5a5060", 5, 9, 6, 1);
+        }
+        return cn.toDataURL();
+      }
+      function toast(t) {
+        const e = document.getElementById("toast");
+        e.textContent = t;
+        e.classList.add("on");
+        clearTimeout(toast.t);
+        toast.t = setTimeout(() => e.classList.remove("on"), 2200);
+      }
+      function give(id) {
+        if (!inv.includes(id)) {
+          inv.push(id);
+          toast("+ " + ITEMS[id].n);
+          document.getElementById("bag").style.display = "inline-block";
+        }
+      }
+      function drop(id) {
+        const i = inv.indexOf(id);
+        if (i >= 0) {
+          inv.splice(i, 1);
+          toast("− " + ITEMS[id].n + " (used)");
+        }
+      }
+      function toggleInv() {
+        const e = document.getElementById("inv");
+        if (e.classList.contains("on")) {
+          e.classList.remove("on");
+          return;
+        }
+        if (
+          cur ||
+          scene != "room" ||
+          done ||
+          document.getElementById("card").classList.contains("on")
+        )
+          return;
+        document.getElementById("il").innerHTML = inv.length
+          ? inv
+              .map(
+                (id) =>
+                  '<div class="it"><img alt="" src="' +
+                  icon(id) +
+                  '"><div><b>' +
+                  ITEMS[id].n +
+                  "</b><span>" +
+                  ITEMS[id].d +
+                  "</span></div></div>",
+              )
+              .join("")
+          : '<div class="it"><span>Nothing yet. Your pockets are empty.</span></div>';
+        e.classList.add("on");
+      }
+      document.getElementById("bag").onclick = toggleInv;
+      document.getElementById("ix").onclick = toggleInv;
+      document.getElementById("inv").onclick = (e) => {
+        if (e.target.id == "inv") toggleInv();
+      };
+      /* ---------- extra art ---------- */
+      art.basin = (X, Y) => {
+        B(X + 1, Y + 2, 14, 12, "#9aa0a8", "#d0d6dc");
+        R("#5a6068", X + 3, Y + 4, 10, 6);
+        R("#8a9098", X + 4, Y + 5, 8, 4);
+        R("#b89038", X + 7, Y - 3, 2, 6);
+        R("#b89038", X + 5, Y - 4, 6, 2);
+      };
+      art.bmir = (X, Y) => {
+        B(X + 2, Y - 14, 12, 18, "#6a5a48", "#8a7a64");
+        B(X + 4, Y - 12, 8, 14, "#6a8090", "#a0b8c8");
+        R(OUT, X + 6, Y - 8, 1, 5);
+        R(OUT, X + 7, Y - 4, 4, 1);
+        R("rgba(255,255,255,.3)", X + 5, Y - 11, 2, 5);
+      };
+      art.notice = (X, Y) => {
+        B(X + 3, Y - 8, 10, 12, "#d8d0b8", "#f0e8d0");
+        R("#5a5060", X + 5, Y - 5, 6, 1);
+        R("#5a5060", X + 5, Y - 3, 6, 1);
+        R("#5a5060", X + 5, Y - 1, 4, 1);
+        R("#9a1424", X + 5, Y + 1, 6, 1);
+      };
+      art.stain = (X, Y) => {
+        R("#5a0a14", X + 1, Y + 3, 14, 9);
+        R("#7a1424", X + 3, Y + 4, 10, 6);
+        R("#8a1a2c", X + 5, Y + 5, 5, 3);
+        R("#5a0a14", X - 1, Y + 6, 3, 3);
+        R("#5a0a14", X + 14, Y + 8, 3, 2);
+      };
+      art.bullet = (X, Y) => {
+        R("rgba(0,0,0,.4)", X + 4, Y + 11, 9, 2);
+        B(X + 4, Y + 6, 8, 4, "#c9a030", "#f0d868");
+        R("#8a6a20", X + 10, Y + 7, 2, 2);
+        R("#fff", X + 6, Y + 7, 1, 1);
+      };
+      function tileBath(cvs) {
+        c = cvs.getContext("2d");
+        for (let y = 4; y <= 10; y++)
+          for (let x = 4; x <= 15; x++) {
+            const X = x * S,
+              Y = y * S;
+            R((x + y) % 2 ? "#6a7078" : "#5e646c", X, Y, S, S);
+            R("#3a3e46", X, Y, S, 1);
+            R("#3a3e46", X, Y, 1, S);
+            R("#7e848c", X + 2, Y + 2, 4, 1);
+          }
+        for (let x = 3; x <= 16; x++)
+          for (let y = 32; y < 64; y += 16) {
+            R("#8a9098", x * S, y, S, 16);
+            R("#5a6068", x * S, y, S, 1);
+            R("#5a6068", x * S, y, 1, 16);
+          }
+        R("#171018", 48, 28, 224, 6);
+        R("rgba(0,0,0,.4)", 48, 32, 224, 32);
+        c = g;
+      }
+      /* ---------- chapter 2 content ---------- */
+      const ROOMO = O;
+      const stain = {
+        id: "stain",
+        tiles: [[11, 5]],
+        vis: () => st.washed && !st.stained,
+        lines: [],
+      };
+      const bulletO = {
+        id: "bullet",
+        tiles: [[7, 4]],
+        art: "bullet",
+        vis: () => st.stained && !st.bullet,
+        lines: [],
+      };
+      ROOMO.push(stain, bulletO);
+      const dynRoom = {
+        lamp: (f) => {
+          if (!st.c1)
+            return [
+              [
+                "",
+                "A gas lamp in a black metal cage, fed by a pale pipe in the wall. It isn’t lit.",
+              ],
+            ];
+          if (st.dawn)
+            return [["", "The lamp is cold. Daylight is coming anyway."]];
+          if (st.lit)
+            return [
+              [
+                "",
+                "The lamp burns steady, a small warm sun in a cage of black iron.",
+              ],
+            ];
+          if (!st.penny) {
+            st.tried = 1;
+            return [
+              [
+                "",
+                "You open the valve and twist the switch. Sparks, a sputter, then nothing.",
+              ],
+              [
+                M,
+                "Four years ago, Klein studied for the Khoy entrance exams under this lamp. Benson insisted. He talked the landlord into calling the gas pipes an upgrade, then bought the lamp almost at cost through his firm. No debt, just savings.",
+              ],
+              [
+                Z,
+                "Gas in the pipe, yet no flame. Unless it has to be paid for. The meter on the wall.",
+              ],
+            ];
+          }
+          st.lit = 1;
+          tgt = 0.62;
+          return [
+            [
+              "",
+              "You twist the switch again. A hiss, a sputter, then flame. Warm light fills the glass cage and pushes the crimson back toward the window.",
+            ],
+            [Z, "Strange. I feel calmer already."],
+          ];
+        },
+        dev: (f) => {
+          if (!st.c1) return null;
+          if (st.penny)
+            return [["", "The meter ticks quietly, content with its penny."]];
+          if (!st.tried)
+            return [
+              [
+                "",
+                "A gas meter: exposed gears, bearings, and a narrow slot at the top. Pay-as-you-burn, by the look of it.",
+              ],
+            ];
+          st.penny = 1;
+          give("penny");
+          pa = () => {
+            drop("penny");
+            upd();
+          };
+          return [
+            [
+              "",
+              "You pat your trouser pocket and find a dull yellow coin: a crowned king on one face, a sheaf of wheat on the other. A copper penny.",
+            ],
+            [
+              Z,
+              "Back home it would be a few yuan. Here, a day’s errands take a handful of these.",
+            ],
+            [
+              "",
+              "You push it into the slot. Clink, clang. The gears grind through a short, tuneful rhythm.",
+            ],
+            [Z, "Now the lamp."],
+          ];
+        },
+        hp: (f) => {
+          if (!st.c1) return null;
+          if (st.wiped)
+            return [
+              ["", "Only a faint shadow remains where the handprint was."],
+            ];
+          if (!st.washed)
+            return [
+              [
+                "",
+                "The handprint is still there. I’ll clean it once I’ve washed up myself.",
+              ],
+            ];
+          st.wiped = 1;
+          return [
+            [
+              "",
+              "You scrub the sticky handprint off the desk with the damp towel until only a pale shadow is left.",
+            ],
+          ];
+        },
+        nb: (f) => {
+          if (!st.c1) return null;
+          if (st.checked && !st.asked) {
+            st.asked = 1;
+            return [
+              [
+                "",
+                "Your eyes drift to the notebook and its warning. Questions pile up.",
+              ],
+              [
+                Z,
+                "Where does a poor family’s son get a gun? Was it suicide, or a staged suicide?",
+              ],
+              [
+                Z,
+                "What trouble could a history graduate from a humble home be in?",
+              ],
+              [
+                Z,
+                "And why so little blood? Did the transmigration patch me up on the way in?",
+              ],
+              [
+                "",
+                "You set the questions aside. There is a bigger one waiting.",
+              ],
+            ];
+          }
+          return [["", "The warning stares back from the page."]];
+        },
+        gun: (f) => {
+          if (!st.c1) return null;
+          if (st.bullet && !st.checked) {
+            st.checked = 1;
+            return [
+              [
+                "",
+                "You open the cylinder and tip it out. Five rounds and one spent shell, all with the same brass shine.",
+              ],
+              [Z, "Five live, one fired. It fits."],
+              ["", "You slide the rounds back in and snap it shut."],
+            ];
+          }
+          if (st.checked)
+            return [["", "The revolver is back in its place, cold and heavy."]];
+          return [
+            [
+              "",
+              "A brass revolver. I want to check it, but first this room needs to stop looking like a crime scene.",
+            ],
+          ];
+        },
+        cab: (f) => {
+          if (!st.c1) return null;
+          if (st.healed && !st.items) {
+            st.items = 1;
+            give("soap");
+            give("towel");
+            return [
+              [
+                "",
+                "In a drawer: a sliver of soap, and on a hook beside it an old towel worn thin.",
+              ],
+              [Z, "Not much, but enough to scrub with."],
+            ];
+          }
+          if (st.asked && !st.shirt) {
+            st.shirt = 1;
+            give("ritual");
+            pa = () => endCh2();
+            return [
+              [
+                "",
+                "You swap in a clean linen shirt from the cabinet and sit down at last.",
+              ],
+              [
+                Z,
+                "Klein’s story can wait. The real problem is why I’m here, and whether I can go back.",
+              ],
+              [
+                "",
+                "Parents, friends, the glow of a screen, hot food. Reasons enough to want home. Click. Click. Your hand spins the revolver’s cylinder without thinking.",
+              ],
+              [
+                Z,
+                "Bad luck all month: a lost phone, clients who cheated me, mistakes at work. And before dinner I tried that luck ritual from the old divination book.",
+              ],
+              [
+                "",
+                "Four portions of food in four corners of the room, four counter-clockwise steps with a chant at each, then five silent minutes. It cost nothing, and nothing happened. Until now.",
+              ],
+              [
+                Z,
+                "If that dragged me here, maybe it can drag me back. I’ll try again tomorrow. A Hail Mary, but it’s the only one I have.",
+              ],
+            ];
+          }
+          if (st.needBread && !st.bread) {
+            st.bread = 1;
+            pa = () => teaScene();
+            return [
+              [
+                "",
+                "You take the leftover rye bread from the cabinet: two dry pieces, kept for lunch.",
+              ],
+            ];
+          }
+          return null;
+        },
+      };
+      ROOMO.forEach((o) => {
+        if (dynRoom[o.id]) o.dyn = dynRoom[o.id];
+      });
+      stain.dyn = () => {
+        st.stained = 1;
+        return [
+          [
+            "",
+            "Beneath the desk, a dark pool has soaked into the boards. Blood, a great deal of it, long since drying.",
+          ],
+          [
+            "",
+            "You scrub until the planks are merely damp. Near the left wall something small glints: a bullet, flattened at the tip.",
+          ],
+          [
+            Z,
+            "A round fired from a revolver pressed to the temple. So that’s how it happened.",
+          ],
+        ];
+      };
+      bulletO.dyn = () => {
+        st.bullet = 1;
+        give("bullet");
+        return [
+          ["", "You pick up the misshapen yellow slug."],
+          [Z, "Pressed to the temple, one shot. Then I woke up in his place."],
+        ];
+      };
+      const HALL = [
+        {
+          id: "hwin",
+          art: "win",
+          w: 1,
+          tiles: [[12, 4]],
+          lines: [
+            [
+              "",
+              "Crimson light pools beneath the window. The shadows of the frame look like a pair of watchful eyes.",
+            ],
+          ],
+        },
+        {
+          id: "note",
+          art: "notice",
+          w: 1,
+          tiles: [[8, 4]],
+          lines: [
+            [
+              "",
+              "A notice in the landlord’s cramped hand: water is included in the rent, waste is shameful, offenders may take their luggage elsewhere.",
+            ],
+          ],
+        },
+      ];
+      const BATH = [
+        {
+          id: "basin",
+          art: "basin",
+          w: 1,
+          tiles: [[8, 4]],
+          lines: [],
+          dyn: (f) => {
+            if (!st.items)
+              return [
+                [
+                  "",
+                  "A wash basin with a tarnished tap, glinting under the moonlight.",
+                ],
+              ];
+            if (st.washed)
+              return [["", "The basin is clean again. No one will know."]];
+            st.washed = 1;
+            ITEMS.towel.n = "Damp towel";
+            ITEMS.towel.d = "Stained pink. Good for wiping up evidence.";
+            return [
+              ["", "You turn the tap. Water roars through the sleeping house."],
+              [
+                Z,
+                "The landlord, Mr. Franky, patrols for running water with his cane and a temper. Quiet, quiet.",
+              ],
+              [
+                "",
+                "You scrub the blood from your face and neck until the water runs clear, then rub the bloodied shirt with the soap.",
+              ],
+              [
+                Z,
+                "A pale face and an ugly wound, but no longer a crime scene. The room, though, must be spattered too.",
+              ],
+            ];
+          },
+        },
+        {
+          id: "bmir",
+          art: "bmir",
+          w: 1,
+          tiles: [[10, 4]],
+          lines: [],
+          dyn: (f) =>
+            st.washed
+              ? [
+                  [
+                    "",
+                    "The rundown mirror shows a hideous wound and a pale face. Nothing worse.",
+                  ],
+                ]
+              : [["", "A cracked, speckled mirror, hardly worth the name."]],
+        },
+        {
+          id: "bwin",
+          art: "win",
+          w: 1,
+          tiles: [[11, 4]],
+          lines: [
+            ["", "The same crimson moon watches through the bathroom glass."],
+          ],
+        },
+      ];
+      const LOCS = {
+        room: {
+          O: () => ROOMO,
+          bg: () => bg,
+          t: () => (st.dawn ? 0.64 : st.lit ? 0.62 : 0.8),
+        },
+        hall: { O: () => HALL, bg: () => bgH, t: () => 0.9 },
+        bath: { O: () => BATH, bg: () => bgB, t: () => 0.8 },
+      };
+      function swapLoc(to, x, y, f) {
+        loc = to;
+        O = LOCS[to].O();
+        curBG = LOCS[to].bg();
+        DOORS = LOCD[to];
+        P.x = x;
+        P.y = y;
+        P.fx = x;
+        P.fy = y;
+        P.f = f;
+        P.mv = 0;
+        tgt = LOCS[to].t();
+        upd();
+      }
+      function transit(d, to, x, y, f, after) {
+        scene = "trans";
+        trans = { t: 0, d, to, x, y, f, after };
+      }
+      function doorSfx() {
+        if (!AC || !snd) return;
+        const t = AC.currentTime,
+          o = AC.createOscillator(),
+          f = AC.createBiquadFilter(),
+          gn = AC.createGain();
+        o.type = "sawtooth";
+        o.frequency.setValueAtTime(110, t);
+        o.frequency.linearRampToValueAtTime(70, t + 0.25);
+        o.frequency.linearRampToValueAtTime(150, t + 0.5);
+        f.type = "bandpass";
+        f.frequency.value = 420;
+        f.Q.value = 4;
+        gn.gain.setValueAtTime(0, t);
+        gn.gain.linearRampToValueAtTime(0.07, t + 0.08);
+        gn.gain.linearRampToValueAtTime(0, t + 0.55);
+        o.connect(f);
+        f.connect(gn);
+        gn.connect(master);
+        o.start(t);
+        o.stop(t + 0.6);
+        const s = AC.createBufferSource();
+        s.buffer = NB;
+        const hf = AC.createBiquadFilter();
+        hf.type = "highpass";
+        hf.frequency.value = 1500;
+        const g2 = AC.createGain();
+        g2.gain.value = 0.12;
+        s.connect(hf);
+        hf.connect(g2);
+        g2.connect(master);
+        s.start(t + 0.02, Math.random(), 0.03);
+      }
+      function doorAct(d) {
+        const right = d.x > P.x;
+        if (loc == "room") {
+          if (!st.c1) {
+            talk([
+              [
+                Z,
+                "Not yet. Out there is a city I know nothing about, and my head is still bleeding.",
+              ],
+            ]);
+            return;
+          }
+          if (right) {
+            if (st.dawn && !st.mel) {
+              meetMelissa();
+              return;
+            }
+            talk([
+              [
+                Z,
+                st.mel
+                  ? "Melissa’s side of the flat. No reason to follow her."
+                  : "Melissa and Benson are asleep behind this door. Not like this.",
+              ],
+            ]);
+            return;
+          }
+          if (st.dawn) {
+            talk([
+              [Z, "The corridor can wait. Melissa will be here any moment."],
+            ]);
+            return;
+          }
+          if (!st.items) {
+            talk([[Z, "I should find something to wash with first."]]);
+            return;
+          }
+          transit(d, "hall", 6, 6, 3, () => {
+            if (!st.hallSeen) {
+              st.hallSeen = 1;
+              talk([
+                [
+                  "",
+                  "The corridor is pitch black but for the red window at its end. You keep your footsteps light.",
+                ],
+              ]);
+            }
+          });
+          return;
+        }
+        if (loc == "hall") {
+          if (right) transit(d, "bath", 7, 8, 3);
+          else transit(d, "room", 4, 8, 3);
+          return;
+        }
+        if (loc == "bath") {
+          if (right) talk([[Z, "A supply closet, locked."]]);
+          else transit(d, "hall", 13, 6, 2);
+        }
+      }
+      function mirrorAct() {
+        if (!st.c1) {
+          if (keyN() < kt()) {
+            talk([
+              [
+                Z,
+                "I should understand this room before I look at myself. The notebook, the revolver, the blood...",
+              ],
+            ]);
+            return;
+          }
+          mirror();
+          return;
+        }
+        if (!st.lit) {
+          talk([
+            [Z, "Too dark and too red to judge the wound. I need real light."],
+          ]);
+          return;
+        }
+        if (!st.healed) {
+          st.healed = 1;
+          upd();
+          talk(
+            [
+              [Z, "Properly, this time."],
+              [
+                "",
+                "Under steady light the damage is plain. The bleeding has stopped, the edges are pink and knitting, and the grayish matter slowly draws back as new flesh grows over it. In an hour or two, perhaps only a faint scar will remain.",
+              ],
+              [Z, "The gift of transmigration? Fine. I’ll take being alive."],
+              [
+                Z,
+                "Still, I look like a crime scene. If Melissa sees me like this in the morning... I need soap and a towel.",
+              ],
+            ],
+            upd,
+          );
+          return;
+        }
+        talk([["", "Pale and wounded, but whole enough to pass at a glance."]]);
+      }
+      const sSay = (l) => (n) => talk(l, n),
+        sFn = (f) => (n) => {
+          f();
+          n();
+        },
+        sWait = (ms) => (n) => setTimeout(n, ms),
+        sMove = (o, x, y) => (n) => {
+          o.tx = x;
+          o.ty = y;
+          o.arr = n;
+        },
+        sBlk = (n) => {
+          veilT = 1;
+          const iv = setInterval(() => {
+            if (veil > 0.98) {
+              clearInterval(iv);
+              setTimeout(n, 900);
+            }
+          }, 50);
+        };
+      function seq(a, i = 0) {
+        if (i >= a.length) return;
+        a[i](() => seq(a, i + 1));
+      }
+      function slam() {
+        thump(0);
+        step();
+      }
+      function fizz() {
+        if (!AC || !snd) return;
+        const t = AC.currentTime,
+          s = AC.createBufferSource();
+        s.buffer = NB;
+        const hf = AC.createBiquadFilter();
+        hf.type = "highpass";
+        hf.frequency.value = 2500;
+        const gn = AC.createGain();
+        gn.gain.setValueAtTime(0.05, t);
+        gn.gain.linearRampToValueAtTime(0, t + 1.2);
+        s.connect(hf);
+        hf.connect(gn);
+        gn.connect(master);
+        s.start(t, 0, 1.3);
+      }
+      function bell(n) {
+        if (!AC || !snd) return;
+        for (let i = 0; i < n; i++) {
+          const t = AC.currentTime + i * 1.3,
+            o = AC.createOscillator(),
+            o2 = AC.createOscillator(),
+            gn = AC.createGain();
+          o.type = "sine";
+          o.frequency.value = 330;
+          o2.type = "sine";
+          o2.frequency.value = 663;
+          gn.gain.setValueAtTime(0, t);
+          gn.gain.linearRampToValueAtTime(0.06, t + 0.02);
+          gn.gain.exponentialRampToValueAtTime(0.001, t + 1.8);
+          o.connect(gn);
+          o2.connect(gn);
+          gn.connect(master);
+          o.start(t);
+          o2.start(t);
+          o.stop(t + 2);
+          o2.stop(t + 2);
+        }
+      }
+      const melO = {
+        id: "mel3",
+        npc: {
+          hair: "#5a3a24",
+          top: "#4a6a9a",
+          topL: "#6a8aba",
+          dress: 1,
+          skirt: "#34486a",
+          skirtL: "#546a90",
+          long: 1,
+        },
+        tiles: [[-9, -9]],
+        vis: () => st.melIn,
+        fx: 16,
+        fy: 8,
+        tx: null,
+        ty: null,
+        lines: [],
+      };
+      ROOMO.push(melO);
+      function toCh2() {
+        st.c1 = 1;
+        flashOut = 1;
+        tgt = 0.8;
+        upd();
+        talk(
+          [
+            [
+              "",
+              "Three quick steps back, heels knocking on the boards. The face in the glass is a corpse’s face, drained and hollow. It should not be moving.",
+            ],
+            [Z, "No one survives that. How am I standing?"],
+            [
+              "",
+              "You turn your head and check the other side. Even in the poor light you can make out the exit wound and the dark stains around it.",
+            ],
+            [
+              "",
+              "You press a hand to your chest: a hard, fast heartbeat. Your skin is cool at first touch, with warmth flowing beneath. You squat and rise, and your knees bend without complaint.",
+            ],
+            [
+              Z,
+              "Alive. Impossibly alive. I need a proper look at this, but the red moonlight is too dim for it.",
+            ],
+            ["", "The lamp beside the desk might help."],
+          ],
+          upd,
+        );
+      }
+      function endCh2() {
+        scene = "cut";
+        seq([
+          sSay([
+            [
+              Z,
+              "Having a plan gives my mind a handrail. The fear finally stops tugging at me.",
+            ],
+            [
+              "",
+              "Out of habit you stand and close the gas valve, watching the lamp shrink to a flicker and die.",
+            ],
+          ]),
+          sFn(() => {
+            st.lit = 0;
+            tgt = 0.86;
+            step();
+          }),
+          sSay([
+            [
+              "",
+              "You sit again in the red dark, revolver under one hand, the other pressed to your temple, and let Klein’s memories play like a film in an empty cinema.",
+            ],
+            [
+              "",
+              "They are shattered glass. How the revolver came into his hands. Whether he fired it himself or someone else did. What the notebook’s warning meant. Whether anything strange happened in the two days before. All missing.",
+            ],
+            [
+              "",
+              "Even ordinary knowledge has gaps. If Klein sat his exams again today, you doubt he would pass.",
+            ],
+            [
+              M,
+              "An interview at Tingen University’s history department, two days from now. His mentor wrote recommendation letters to Tingen and Backlund.",
+            ],
+            [Z, "Not my problem. Not if the ritual works."],
+          ]),
+          sBlk,
+          sFn(() => {
+            st.dawn = 1;
+            tgt = 0.64;
+            veilT = 0;
+          }),
+          sWait(1300),
+          sSay([
+            [
+              "",
+              "In the west, the red moon slides down and sets. In the east, a thin gold line widens along the horizon.",
+            ],
+            ["", "Somewhere in the flat a door opens, and footsteps stir."],
+            [Z, "Melissa is up. Punctual as ever."],
+            [
+              M,
+              "Melissa was never like most girls. From childhood she loved gears, springs and bearings, and dreamed of being a steam mechanic. At fifteen she earned a place in Tingen Technical School’s steam and machinery department, and Benson stretched every coin to keep her there.",
+            ],
+            [
+              M,
+              "Benson’s firm has been battered by trouble in the Southern Continent. A third of its staff are gone, and he takes every hard job and overtime shift to keep his place.",
+            ],
+            [
+              M,
+              "Klein himself always felt a step behind at university. Old Feysac was a noble child’s inheritance; he met it late, and scraped through with average marks.",
+            ],
+            [
+              Z,
+              "Everyone in this house is carrying something. And I’m wearing the face of the one who never said a word.",
+            ],
+            ["", "The footsteps stop outside your door."],
+          ]),
+          sFn(() => {
+            scene = "room";
+            upd();
+          }),
+        ]);
+      }
+      function meetMelissa() {
+        st.mel = 1;
+        scene = "cut";
+        seq([
+          sSay([
+            [
+              "",
+              "Your hand is already turning the doorknob when your thoughts catch up. Only then do you notice what is in your other hand.",
+            ],
+            [
+              Z,
+              "The revolver! A semi-regulated weapon, and a sister two steps away. And my head...",
+            ],
+          ]),
+          sFn(() => {
+            slam();
+            P.x = 14;
+            P.y = 7;
+            P.f = 0;
+            give("watch");
+          }),
+          sSay([
+            [
+              "",
+              "You shove the revolver into the desk drawer, slam it shut, and snatch the nearest object. Your fingers find your temple: smooth skin. The wound has already closed.",
+            ],
+          ]),
+          sFn(() => {
+            melO.fx = 16;
+            melO.fy = 8;
+            st.melIn = 1;
+          }),
+          sMove(melO, 13, 8),
+          sSay([
+            ["Melissa", "What was that noise?"],
+            [Z, "The drawer stuck. It’s nothing."],
+            [
+              "",
+              "Her brown eyes search your face. She is thin from a lean diet and a little pale, but her skin has the bloom of youth. For a moment she is simply your younger sister, though you have never had one.",
+            ],
+          ]),
+          sSay([
+            [
+              "",
+              "You flick open the silver vine-leaf watch. Inside is a small photo of your father, the sergeant. It is the best thing he left behind, though second-hand and prone to stopping.",
+            ],
+            [
+              "",
+              "The second hand sits motionless. You wind the crown. No click of a taut spring. Nothing.",
+            ],
+            [Z, "Broken again."],
+            [
+              "",
+              "Melissa gives you a flat look, crosses the room and takes the watch. She tugs the crown upward and turns it twice. Tick, tick, tick. The second hand moves.",
+            ],
+            [Z, "Pulling the crown up... that’s just how you set the time."],
+          ]),
+          sFn(() => bell(6)),
+          sSay([
+            [
+              "",
+              "From a distant cathedral, a bell tolls six. It sounds thin and faraway.",
+            ],
+            [
+              "",
+              "Melissa tilts her head, pulls the crown up again, and sets the hands to match. Then she presses it back and hands the watch to you.",
+            ],
+            ["Melissa", "It’s fixed."],
+            [
+              "",
+              "You smile politely, embarrassed. Her look is half exasperation, half something warmer, the look you would give a slow brother you love. She fetches her toiletries and towel and heads for the shared bathroom.",
+            ],
+          ]),
+          sMove(melO, 16, 8),
+          sFn(() => {
+            st.melIn = 0;
+            step();
+          }),
+          sSay([
+            [
+              "",
+              "Click, clack. You open and close the watch without thinking, and a question settles in. Klein fired a revolver at his own head with no silencer, and Melissa, a wall away, heard nothing.",
+            ],
+            [
+              Z,
+              "Was she sleeping that deeply? Or is there something more behind Klein’s death?",
+            ],
+          ]),
+          sWait(1400),
+          sFn(() => {
+            melO.fx = 16;
+            melO.fy = 8;
+            st.melIn = 1;
+            step();
+          }),
+          sMove(melO, 13, 8),
+          sSay([
+            [
+              "",
+              "Melissa returns and finds you still clicking the watch open and shut. Her gaze fogs over with exasperation again.",
+            ],
+            [
+              "Melissa",
+              "Klein, bring out whatever bread is left, and buy fresh today. We have mutton and peas too, and with your interview coming I’ll stew them for you.",
+            ],
+          ]),
+          sMove(melO, 14, 6),
+          sFn(() => {
+            scene = "room";
+            st.needBread = 1;
+            upd();
+          }),
+        ]);
+      }
+      function teaScene() {
+        scene = "cut";
+        seq([
+          sSay([
+            [
+              "",
+              "Melissa drags a small stove out of its corner, feeds it charcoal, and sets a pot of water on to boil. From the lowest drawer comes a tin of cheap tea. She drops in about ten leaves and calls it tea.",
+            ],
+          ]),
+          sFn(fizz),
+          sWait(1600),
+          sSay([
+            [
+              "",
+              "She pours two big cups, and you share the rye bread over them. It is dry and unappetizing, but your stomach is empty and you force it down.",
+            ],
+            [Z, "No sawdust in it, at least. Small mercies."],
+            [
+              "Melissa",
+              "Fresh bread, eight pounds, because the heat spoils it fast. And the mutton and peas. Don’t forget.",
+            ],
+            [Z, "She repeats herself for her dull brother."],
+            [Z, "Alright."],
+            [
+              "",
+              "By Klein’s muscle memory, a Loen pound feels close to half a kilogram.",
+            ],
+          ]),
+          sFn(() => give("errands")),
+          sSay([
+            [
+              "",
+              "She packs the last of the bread for lunch, pins on the tattered veil cap your mother left behind, and slings a homemade bag of books over her shoulder. Carriages cost a penny a kilometer, so she will walk the fifty minutes to the Technical School.",
+            ],
+          ]),
+          sMove(melO, 15, 8),
+          sSay([
+            [
+              "Melissa",
+              "Klein, don’t buy too much mutton or peas. Benson might be back on Sunday. And only eight pounds of bread!",
+            ],
+            [Z, "Alright, alright."],
+          ]),
+          sMove(melO, 16, 8),
+          sFn(() => {
+            st.melIn = 0;
+            doorSfx();
+          }),
+          sWait(900),
+          sSay([
+            [Z, "Sunday... so Benson may be home then."],
+            [
+              M,
+              "A year here has twelve months and a week has seven days, just like home. The months follow the stars, the days follow the gods. Seven orthodox gods hold the Northern Continent: the Blazing Sun, the Lord of Storms, the God of Knowledge and Wisdom, the Evernight Goddess, Mother Earth, the God of War, and the God of Steam and Machinery.",
+            ],
+            [
+              Z,
+              "Months from astronomy, days from religion. A parallel world, then?",
+            ],
+            [
+              "",
+              "The apartment is suddenly very quiet, and your thoughts drift back to the ritual.",
+            ],
+            [Z, "Sorry... I really do want to go home."],
+          ]),
+          sBlk,
+          sFn(() => {
+            done = 1;
+            scene = "end";
+            veilT = 0;
+          }),
+        ]);
+      }
+
+      talk(
+        [
+          [Z, "Gray morning light. My head still throbs under this cloth."],
+          [
+            "Melissa",
+            "Klein! You’re finally up. Come and eat before it goes cold.",
+          ],
+          [Z, "Her voice makes my heart pound. Just act normal."],
+        ],
+        upd,
+      );
+
+      let noDoor = 0;
+      buildBG(bg, 0);
+      noDoor = 1;
+      const mkcv = () => {
+        const e = document.createElement("canvas");
+        e.width = 320;
+        e.height = 192;
+        return e;
+      };
+      function doorArt(ctx, d, left) {
+        c = ctx;
+        const X = d.x * S + (left ? 0 : 2),
+          Y = d.y * S - 8;
+        B(X, Y, 14, 28, "#3a2518", "#5a3a28");
+        R("#241610", X + 3, Y + 4, 8, 8);
+        R("#241610", X + 3, Y + 15, 8, 9);
+        R("#5a3a28", X + 3, Y + 4, 8, 1);
+        R("#b89038", X + (left ? 10 : 2), Y + 14, 2, 2);
+        c = g;
+      }
+      function shrink(src, b, doors) {
+        const cn = mkcv(),
+          x = cn.getContext("2d"),
+          W = b.x1 - b.x0 + 1,
+          H = b.y1 - b.y0 + 1;
+        x.imageSmoothingEnabled = false;
+        x.fillStyle = "#0b070e";
+        x.fillRect(0, 0, 320, 192);
+        x.drawImage(
+          src,
+          3 * S,
+          2 * S,
+          (W + 2) * S,
+          2 * S,
+          (b.x0 - 1) * S,
+          (b.y0 - 2) * S,
+          (W + 2) * S,
+          2 * S,
+        );
+        x.drawImage(
+          src,
+          4 * S,
+          4 * S,
+          W * S,
+          H * S,
+          b.x0 * S,
+          b.y0 * S,
+          W * S,
+          H * S,
+        );
+        x.drawImage(
+          src,
+          3 * S,
+          4 * S,
+          S,
+          H * S,
+          (b.x0 - 1) * S,
+          b.y0 * S,
+          S,
+          H * S,
+        );
+        x.drawImage(
+          src,
+          16 * S,
+          4 * S,
+          S,
+          H * S,
+          (b.x1 + 1) * S,
+          b.y0 * S,
+          S,
+          H * S,
+        );
+        x.drawImage(
+          src,
+          3 * S,
+          11 * S,
+          (W + 2) * S,
+          S,
+          (b.x0 - 1) * S,
+          (b.y1 + 1) * S,
+          (W + 2) * S,
+          S,
+        );
+        doors.forEach((d, i) => doorArt(x, d, i == 0));
+        return cn;
+      }
+      let bgH = mkcv();
+      buildBG(bgH, 2);
+      let bgB = mkcv();
+      buildBG(bgB, 3);
+      tileBath(bgB);
+      bgH = shrink(bgH, LOCB.hall, LOCD.hall);
+      bgB = shrink(bgB, LOCB.bath, LOCD.bath);
+      noDoor = 0;
       (function loop() {
         draw();
         pollPad();
